@@ -1,10 +1,10 @@
 `timescale 1ns/1ps
 
 module alu_tb;
-  reg  [31:0] a, b;
+  reg  [4:0] a, b;
   reg  [2:0]  ALUControl;
   reg  [1:0]  bshift;
-  wire [31:0] Result;
+  wire [4:0] Result;
   wire [3:0]  ALUFlags;
 
   top top1(a, b, bshift, ALUControl, Result, ALUFlags);
