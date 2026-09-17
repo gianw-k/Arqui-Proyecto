@@ -26,7 +26,7 @@ module alu(input  [4:0] a, b, //Entradas de 5 bits
 
   assign neg = Result[4];
   assign zero = (Result == 5'b0);
-  assign carry = (ALUControl[2:1] == 2'b00) & sum[5]; //ALUControl[1] = 0 => aritmetico
+  assign carry = (ALUControl[2:1] == 2'b00) & sum[5]; //ALUControl[2:1] = 00 => aritmetico
   assign overflow = (ALUControl[2:1] == 2'b00) & ~(a[4] ^ b[4] ^ ALUControl[0]) & (a[4] ^ sum[4]);
   assign ALUFlags = {neg, zero, carry, overflow};
 
