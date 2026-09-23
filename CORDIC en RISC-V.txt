@@ -47,7 +47,7 @@
 main:
     li   s2, 0x100          # s2 es direccion base, donde se guardara el coseno
     li   a0, 0x100            # direccion donde se guardara el coseno obtenido
-    li   s2, 0x104             # direccion donde se guardara el seno obtenido
+    li   a1, 0x104             # direccion donde se guardara el seno obtenido
 	# En a2 se guardara el grado a procesar
 
     # ---- Casos de prueba: descomenta solo uno para probar ----
