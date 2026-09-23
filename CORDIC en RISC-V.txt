@@ -1,0 +1,176 @@
+# ================================================================
+# CORDIC seno/coseno en RV32I 
+# Hola chicos, espero entiendan como es que funciona el programa aquí
+# Se sigue la misma rutina: empezar con los valores iniciales de z, y y z, e iterar hasta obtener valores cercanos 
+# al coseno (en x) y seno (en y).
+# Por como funciona RISC-V, guardamos las direcciones donde se guarden cos(z) y sen(z).
+# Tambien se realizara el error absoluto con los casos de ejemplo
+# ================================================================
+
+# Uso de stack_pointer. Aseguramos espacio de acuerdo a la cantidad de valores a guardar
+    addi sp, sp, -64        # 16 valores alpha_i de 4 bytes = 64 bytes exactos
+
+    li t0, 754974720        # alpha_0
+    sw t0, 0(sp)
+    li t0, 445687602        # alpha_1
+    sw t0, 4(sp)
+    li t0, 235489088        # alpha_2
+    sw t0, 8(sp)
+    li t0, 119537938        # alpha_3
+    sw t0, 12(sp)
+    li t0, 60000934         # alpha_4
+    sw t0, 16(sp)
+    li t0, 30029717         # alpha_5
+    sw t0, 20(sp)
+    li t0, 15018523         # alpha_6
+    sw t0, 24(sp)
+    li t0, 7509720          # alpha_7
+    sw t0, 28(sp)
+    li t0, 3754917          # alpha_8
+    sw t0, 32(sp)
+    li t0, 1877466          # alpha_9
+    sw t0, 36(sp)
+    li t0, 938734           # alpha_10
+    sw t0, 40(sp)
+    li t0, 469367           # alpha_11
+    sw t0, 44(sp)
+    li t0, 234684           # alpha_12
+    sw t0, 48(sp)
+    li t0, 117342           # alpha_13
+    sw t0, 52(sp)
+    li t0, 58671            # alpha_14
+    sw t0, 56(sp)
+    li t0, 29335            # alpha_15
+    sw t0, 60(sp)
+
+# --------- Programa principal ---------
+main:
+    li   s2, 0x100          # s2 es direccion base, donde se guardara el coseno
+    li   a0, 0x100            # direccion donde se guardara el coseno obtenido
+    li   s2, 0x104             # direccion donde se guardara el seno obtenido
+	# En a2 se guardara el grado a procesar
+
+    # ---- Casos de prueba: descomenta solo uno para probar ----
+	
+	# ---- Caso de prueba: 0 grados ----
+    # addi a2, zero, 0
+    # li   t0, 1073741824        # cos(0) esperado
+    # li   t1, 0                  # sin(0) esperado
+    # sw   t0, 8(s2)			   # se guarda para poder inspeccionarlo/compararlo despues
+    # sw   t1, 12(s2)
+	
+    # ---- Caso de prueba: 30 grados ----
+    addi a2, zero, 30            
+    li   t0, 929887697            # cos(30) esperado
+    li   t1, 536870912             # sin(30) esperado
+    sw   t0, 8(s2)                  
+    sw   t1, 12(s2)
+
+	# ---- Caso de prueba: 45 grados ----
+    # addi a2, zero, 45
+    # li   t0, 759250125          # cos(45) esperado
+    # li   t1, 759250125           # sin(45) esperado
+    # sw   t0, 8(s2)
+    # sw   t1, 12(s2)
+ 	
+	# ---- Caso de prueba: 60 grados ----
+    # addi a2, zero, 60
+    # li   t0, 536870912           # cos(60) esperado
+    # li   t1, 929887697            # sin(60) esperado
+    # sw   t0, 8(s2)
+    # sw   t1, 12(s2)
+
+	# ---- Caso de prueba: 90 grados ----
+    # addi a2, zero, 90
+    # li   t0, 0                     # cos(90) esperado
+    # li   t1, 1073741824             # sin(90) esperado
+    # sw   t0, 8(s2)
+    # sw   t1, 12(s2)
+
+    jal  ra, cordic_sincos       # Saltamos a la funcion para usar CORDIC
+	
+	
+
+    # ---- Error absoluto = |obtenido - esperado| (solo resta y shift, sin division) ----
+    lw   t0, 0(a0)                # cos obtenido
+    lw   t1, 8(s2)                 # cos esperado
+    sub  t2, t0, t1                 # diff = obtenido - esperado
+    srli t3, t2, 31                  # signo de diff, define si lo negamos 
+    beq  t3, zero, cos_ok			  # Si diff es positivo, solo lo guardamos 
+    sub  t2, zero, t2                 # si es negativo, se niega -> valor absoluto
+cos_ok:
+    sw   t2, 16(s2)                    # error absoluto del coseno
+
+    lw   t0, 4(s2)                # sin obtenido
+    lw   t1, 12(s2)                 # sin esperado
+    sub  t2, t0, t1
+    srli t3, t2, 31
+    beq  t3, zero, sin_ok
+    sub  t2, zero, t2
+sin_ok:
+    sw   t2, 20(s2)                    # error absoluto del seno
+
+    # Error relativo = error_absoluto / |esperado|. RV32I base no tiene division (eso es
+    # extension "M"), asi que igual que el testbench de Verilog (que tampoco calcula el
+    # error, solo hace $monitor), lo mas practico es leer estos 3 valores del volcado de
+    # memoria (s2+0..+20) y calcular el error relativo a mano/calculadora. Como ambos
+    # numeros estan en la misma escala Q2.30, la escala se cancela y puedes usar los
+    # enteros guardados directamente: rel = error_absoluto / esperado.
+
+
+halt:
+    j    halt                # fin de programa
+
+
+
+# --------- Subrutina CORDIC ---------
+# a0 = direccion coseno, a1 = direccion seno, a2 = angulo (grados)
+cordic_sincos:
+    li   t0, 652032874      # x0 = 1/K16, Q2.30 (igual que el equipo de Verilog)
+    li   t1, 0              # y0
+    slli t2, a2, 24         # z0 = angulo <<< 24  (grados enteros -> Q8.24)
+
+    li   s0, 0              # s0 = i; el iterador
+    li   s1, 16             # limite de iteraciones (N = 16)
+
+iteraciones:
+    bge  s0, s1, fin_iter     # si el iterador es mayor a 16, salimos de iteraciones
+
+    addi t3, t0, 0            # t3 = x_i
+    addi t4, t1, 0            # t4 = y_i
+    addi t5, t2, 0            # t5 = z_i
+
+    srli t6, t2, 31           # Nos quedamos con el signo de z_i (bit 31): 0 = positivo, 1 = negativo
+    bne  t6, zero, iter_neg   # Si el signo de z_i no es cero, vamos a  trabajar con d_i negativo
+	# Recuerda: si z_i es positivo, d_i es positivo; si z_i es negativo, d_i es negativo
+
+    iter_pos:
+        sra  t6, t4, s0        # t6 = y_i >>> i
+        sub  t0, t3, t6        # x_{i+1} = x_i - (y_i>>>i)
+        sra  t6, t3, s0        # x_i >>> i
+        add  t1, t4, t6        # y_{i+1} = y_i + (x_i>>>i)
+        slli t6, s0, 2         # offset = i*4 (acuerdate: i va de 0 a 15 en orden natural)
+        add  t6, t6, sp		   # t6 = direccion de stack_pointer + offset
+        lw   t3, 0(t6)         # t3 = alpha_i
+        sub  t2, t5, t3        # z_{i+1} = z_i - alpha_i
+        j    next_iter         # Nos saltamos hasta next_iter
+
+    iter_neg:
+        sra  t6, t4, s0
+        add  t0, t3, t6        # x_{i+1} = x_i + (y_i>>>i)
+        sra  t6, t3, s0
+        sub  t1, t4, t6        # y_{i+1} = y_i - (x_i>>>i)
+        slli t6, s0, 2         
+        add  t6, t6, sp
+        lw   t3, 0(t6)
+        add  t2, t5, t3        # z_{i+1} = z_i + alpha_i
+
+    next_iter:
+        addi s0, s0, 1         # se incrementa el iterador i
+        j    iteraciones       # salto de vuelta al inicio del bucle
+
+fin_iter:
+    sw   t0, 0(a0)             # cos(theta) ~ x final
+    sw   t1, 0(a1)             # sin(theta) ~ y final
+    addi sp, sp, 64            # restauramos el stack pointer
+    ret
