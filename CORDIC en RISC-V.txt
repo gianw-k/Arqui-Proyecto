@@ -122,7 +122,7 @@ main:
     beq  t3, zero, cos_ok			  # Si diff es positivo, solo lo guardamos
     sub  t2, zero, t2                 # si es negativo, se niega -> valor absoluto
 cos_ok:
-    sw   t2, 16(s2)                    # error absoluto del coseno
+    sw   t2, 16(s2)                    # error absoluto del coseno = 0xFF10
 
     lw   t0, 4(s2)                # sin obtenido
     lw   t1, 12(s2)                 # sin esperado
@@ -131,7 +131,7 @@ cos_ok:
     beq  t3, zero, sin_ok
     sub  t2, zero, t2
 sin_ok:
-    sw   t2, 20(s2)                    # error absoluto del seno
+    sw   t2, 20(s2)                    # error absoluto del seno = 0xFF14
 
     # Error relativo = error_absoluto / |esperado|. RV32I base no tiene division (eso es
     # extension "M"), asi que igual que el testbench de Verilog (que tampoco calcula el
