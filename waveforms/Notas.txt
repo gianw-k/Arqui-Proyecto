@@ -1,0 +1,9 @@
+Se coloca el angle (En el alu: a)
+AluControl  (El tipo Sin o Cosine)
+El i        (Iteraciones hasta 15)
+Result      (Lo que devuelve el cordic)
+Value       (Para mejor visualizacion se hace la conversión)
+
+---
+Se genera una tabla de comparaciones en la terminal tras correr el código.
+Se muestra muy poco tiempo el estado 5 debido a que el testbench esta diseñado al rededor de la visualizacion de esta tabla.
