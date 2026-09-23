@@ -99,4 +99,9 @@ module alu_tb;
     $finish;
   end
 
+  initial begin
+    $dumpfile("test.vcd");
+    $dumpvars;
+  end
+
 endmodule
