@@ -19,9 +19,10 @@ module cordic(input  clk, reset, start,
   // K = 1/K16 = 0.607252935 -> 0.607252935 * 2^30 = 652032874
   localparam signed [31:0] K = 32'sd652032874;
 
-  reg [1:0] state, next_state;
-  reg signed [31:0] x, y, z;
-  reg [3:0] i;
+  // Registros principales para FSM y para el algoritmo de CORDIC
+  reg [1:0] state, next_state;   // Para FSM
+  reg signed [31:0] x, y, z;    // Para Cordic
+  reg [3:0] i;                  // Para Cordic
 
   // Tabla Q8.24: atan(2^-i) en grados * 2^24
   reg signed [31:0] atan_i;
